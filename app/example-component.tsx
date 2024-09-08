@@ -22,22 +22,23 @@ export function ExampleComponent() {
         scope: "https://www.googleapis.com/auth/calendar.readonly",
         ux_mode: "popup",
         callback: (response) => {
-            console.log("response from google", response);
+          console.log("response from google", response);
         },
         error_callback: (error) => {
-            console.log("error from google", error);
-        }
+          console.log("error from google", error);
+        },
       })
     );
   }, [gsi]);
 
   return (
     <div>
-        <div>
-
-      Has GSI: {gsi ? "Yes" : "No"}
-        </div>
-     {gsiClient && <button onClick={() => gsiClient.requestCode()}>Authorize with Google</button>} 
+      <div>Has GSI: {gsi ? "Yes" : "No"}</div>
+      {gsiClient && (
+        <button onClick={() => gsiClient.requestCode()}>
+          Authorize with Google
+        </button>
+      )}
     </div>
   );
 }
