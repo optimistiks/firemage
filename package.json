@@ -15,6 +15,8 @@
     "react-dom": "^18"
   },
   "devDependencies": {
+    "@types/google.accounts": "^0.0.14",
+    "@types/gsi": "^0.0.4",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

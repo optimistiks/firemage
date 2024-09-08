@@ -5,6 +5,7 @@ import { getQueryClient } from "@/app/get-query-client";
 // Since QueryClientProvider relies on useContext under the hood, we have to put 'use client' on top
 import { QueryClientProvider } from "@tanstack/react-query";
 import { PropsWithChildren } from "react";
+import { GoogleGsiProvider } from "./google-gsi-provider";
 
 export default function Providers({ children }: PropsWithChildren) {
   // NOTE: Avoid useState when initializing the query client if you don't
@@ -13,6 +14,10 @@ export default function Providers({ children }: PropsWithChildren) {
   //       render if it suspends and there is no boundary
   const queryClient = getQueryClient();
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <GoogleGsiProvider>
+{children}
+      </GoogleGsiProvider>
+    </QueryClientProvider>
   );
 }
