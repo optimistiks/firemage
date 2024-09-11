@@ -1,25 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
+import { generateState, generateCodeVerifier } from "arctic";
 import { encrypt } from "./app/session";
 
 export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === "/") {
-    // https://developers.google.com/identity/protocols/oauth2/web-server#node.js_1
-    // create "state" parameter for Google OAuth and save it in an encrypted cookie
-    // we use Web Crypto API for the sake of Edge Runtime, not the node "crypto" module
-    const state = crypto.randomUUID();
-  console.log("new session state", state)
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    const session = await encrypt({ state, expiresAt });
+    if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.GOOGLE_OAUTH_CLIENT_SECRET) {
+      throw new Error("GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET must be set");
+    }
+
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+    const [state, codeVerifier] = await Promise.all([
+      encrypt({ state: generateState() }, expiresAt),
+      encrypt({ codeVerifier: generateCodeVerifier() }, expiresAt),
+    ]);
+
     const response = NextResponse.next();
+
     response.cookies.set({
-      name: "session",
-      value: session,
+      name: "state",
+      value: state,
       httpOnly: true,
       secure: true,
       expires: expiresAt,
       sameSite: "lax",
       path: "/",
     });
+
+    response.cookies.set({
+      name: "codeVerifier",
+      value: codeVerifier,
+      httpOnly: true,
+      secure: true,
+      expires: expiresAt,
+      sameSite: "lax",
+      path: "/",
+    });
+
     return response;
   }
 }
