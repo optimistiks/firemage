@@ -1,24 +1,27 @@
 import "server-only";
 
-import { SignJWT, jwtVerify } from "jose";
+import { EncryptJWT, jwtDecrypt, base64url } from "jose";
+
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET must be set");
+}
 
 const secretKey = process.env.SESSION_SECRET;
-const encodedKey = new TextEncoder().encode(secretKey);
+const encodedKey = base64url.decode(secretKey);
 
 export async function encrypt(
   payload: Record<string, unknown>,
   expiresAt: Date
 ) {
-  return new SignJWT(payload)
-    .setProtectedHeader({ alg: "HS256" })
+  return new EncryptJWT(payload)
+    .setProtectedHeader({ alg: "dir", enc: "A128CBC-HS256" })
     .setIssuedAt()
     .setExpirationTime(expiresAt)
-    .sign(encodedKey);
+    .encrypt(encodedKey);
 }
 
 export async function decrypt(session: string | undefined = "") {
-  const { payload } = await jwtVerify(session, encodedKey, {
-    algorithms: ["HS256"],
-  });
+  const { payload, protectedHeader } = await jwtDecrypt(session, encodedKey);
+  console.log("decrypted", { payload, protectedHeader });
   return payload;
 }

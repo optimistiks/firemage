@@ -1,30 +1,11 @@
 import { cookies } from "next/headers";
-import { decrypt } from "../session";
 import { ArcticFetchError, Google, OAuth2RequestError } from "arctic";
 
-export default async function GoogleOAuthRedirectPage({ searchParams }: {
-  searchParams: { code: string, state: string };
+export default async function GoogleOAuthRedirectPage({
+  searchParams,
+}: {
+  searchParams: { code: string; state: string };
 }) {
-  const code = searchParams.code;
-  const state = searchParams.state;
-
-  const cookieStore = cookies();
-
-  const stateCookie = await decrypt(cookieStore.get("state")?.value);
-  const codeVerifierCookie = await decrypt(
-    cookieStore.get("codeVerifier")?.value
-  );
-
-  if (
-    code === null ||
-    stateCookie.state === null ||
-    state !== stateCookie.state ||
-    codeVerifierCookie.codeVerifier == null
-  ) {
-    // 400
-    throw new Error("Invalid request");
-  }
-
   if (
     !process.env.GOOGLE_OAUTH_CLIENT_ID ||
     !process.env.GOOGLE_OAUTH_CLIENT_SECRET
@@ -34,31 +15,77 @@ export default async function GoogleOAuthRedirectPage({ searchParams }: {
     );
   }
 
+  const code = searchParams.code;
+  const state = searchParams.state;
+  console.log("RECEIVED", { code, state });
+
+  const cookieStore = cookies();
+
+  const storedState = cookieStore.get("state")?.value;
+  const storedCodeVerifier = cookieStore.get("codeVerifier")?.value;
+
+  console.log("RETRIEVED", { storedState, storedCodeVerifier });
+
+  if (
+    code == null ||
+    storedState == null ||
+    state !== storedState ||
+    storedCodeVerifier == null
+  ) {
+    throw new Error("Invalid request");
+  }
+
+  const google = new Google(
+    process.env.GOOGLE_OAUTH_CLIENT_ID,
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET,
+    "http://localhost:3000/google-oauth-redirect"
+  );
+
   try {
-    const google = new Google(
-      process.env.GOOGLE_OAUTH_CLIENT_ID,
-      process.env.GOOGLE_OAUTH_CLIENT_SECRET,
-      "http://localhost:3000/google-oauth-redirect"
-    );
     const tokens = await google.validateAuthorizationCode(
       code,
-      codeVerifierCookie.codeVerifier as string
+      storedCodeVerifier
     );
     const accessToken = tokens.accessToken();
-    console.log({ accessToken });
+    const accessTokenExpiresInSeconds = tokens.accessTokenExpiresInSeconds();
+    const accessTokenExpiresAt = tokens.accessTokenExpiresAt();
+    const hasRefreshToken = tokens.hasRefreshToken();
+    console.log({
+      accessToken,
+      accessTokenExpiresInSeconds,
+      accessTokenExpiresAt,
+      hasRefreshToken,
+    });
+    if (
+      "refresh_token_expires_in" in tokens.data &&
+      typeof tokens.data.refresh_token_expires_in === "number"
+    ) {
+      const refreshTokenExpiresIn = tokens.data.refresh_token_expires_in;
+      console.log({ refreshTokenExpiresIn });
+    }
+    if (hasRefreshToken) {
+      const refreshToken = tokens.refreshToken();
+      console.log({ refreshToken });
+    }
+    try {
+      const idToken = tokens.idToken();
+      console.log({ idToken });
+    } catch (err) {
+      console.log("no id token found", err);
+    }
+    await google.revokeToken(accessToken);
+    console.log("access revoked");
   } catch (e) {
     console.log(e);
     if (e instanceof OAuth2RequestError) {
       // Invalid authorization code, credentials, or redirect URI
       const code = e.code;
       console.log({ code });
-      // ...
     }
     if (e instanceof ArcticFetchError) {
       // Failed to call `fetch()`
       const cause = e.cause;
       console.log({ cause });
-      // ...
     }
     // Parse error
     throw e;
