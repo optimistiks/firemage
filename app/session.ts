@@ -1,6 +1,6 @@
 import "server-only";
 
-import { EncryptJWT, jwtDecrypt, base64url } from "jose";
+import { EncryptJWT, jwtDecrypt, base64url, JWTPayload } from "jose";
 
 if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET must be set");
@@ -20,8 +20,10 @@ export async function encrypt(
     .encrypt(encodedKey);
 }
 
-export async function decrypt(session: string | undefined = "") {
-  const { payload, protectedHeader } = await jwtDecrypt(session, encodedKey);
+export async function decrypt<T extends JWTPayload>(
+  session: string | undefined = ""
+): Promise<T & JWTPayload> {
+  const { payload, protectedHeader } = await jwtDecrypt<T>(session, encodedKey);
   console.log("decrypted", { payload, protectedHeader });
   return payload;
 }

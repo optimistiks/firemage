@@ -46,16 +46,19 @@ export default async function GoogleOAuthRedirectPage({
       code,
       storedCodeVerifier
     );
+
     const accessToken = tokens.accessToken();
     const accessTokenExpiresInSeconds = tokens.accessTokenExpiresInSeconds();
     const accessTokenExpiresAt = tokens.accessTokenExpiresAt();
     const hasRefreshToken = tokens.hasRefreshToken();
+
     console.log({
       accessToken,
       accessTokenExpiresInSeconds,
       accessTokenExpiresAt,
       hasRefreshToken,
     });
+
     if (
       "refresh_token_expires_in" in tokens.data &&
       typeof tokens.data.refresh_token_expires_in === "number"
@@ -63,18 +66,21 @@ export default async function GoogleOAuthRedirectPage({
       const refreshTokenExpiresIn = tokens.data.refresh_token_expires_in;
       console.log({ refreshTokenExpiresIn });
     }
+
     if (hasRefreshToken) {
       const refreshToken = tokens.refreshToken();
       console.log({ refreshToken });
     }
+
     try {
       const idToken = tokens.idToken();
       console.log({ idToken });
     } catch (err) {
-      console.log("no id token found", err);
+      console.log(
+        "no id token found",
+        err instanceof Error ? err.message : "unknown"
+      );
     }
-    await google.revokeToken(accessToken);
-    console.log("access revoked");
   } catch (e) {
     console.log(e);
     if (e instanceof OAuth2RequestError) {

@@ -2,6 +2,7 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { ProjectList } from "@/app/ProjectList";
 import { decrypt, encrypt } from "@/app/session";
+import { DisconnectGoogle } from "@/app/DisconnectGoogle";
 
 export default async function Home() {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -14,6 +15,9 @@ export default async function Home() {
       <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
         <Suspense fallback={<div>Loading button...</div>}>
           <ProjectList />
+        </Suspense>
+        <Suspense fallback={<div>Loading button...</div>}>
+          <DisconnectGoogle />
         </Suspense>
       </main>
       <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
