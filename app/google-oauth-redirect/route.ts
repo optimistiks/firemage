@@ -16,13 +16,18 @@ export async function GET(request: NextRequest) {
 
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
-  console.log("RECEIVED", { code, state });
+  console.log("oauth step 3: received code and state from Google", {
+    code,
+    state,
+  });
 
   const cookieStore = cookies();
   const storedState = cookieStore.get("state")?.value;
   const storedCodeVerifier = cookieStore.get("codeVerifier")?.value;
-
-  console.log("RETRIEVED", { storedState, storedCodeVerifier });
+  console.log("oauth step 4: retrieved state and codeVerifier from cookies", {
+    storedState,
+    storedCodeVerifier,
+  });
 
   if (
     code == null ||
@@ -30,6 +35,7 @@ export async function GET(request: NextRequest) {
     state !== storedState ||
     storedCodeVerifier == null
   ) {
+    console.log("oauth state or code mismatch");
     return new Response(`Invalid request`, {
       status: 400,
     });
@@ -42,6 +48,9 @@ export async function GET(request: NextRequest) {
   );
 
   try {
+    console.log(
+      "oauth step 5: validating authorization code & retrieving tokens..."
+    );
     const tokens = await google.validateAuthorizationCode(
       code,
       storedCodeVerifier
@@ -51,12 +60,14 @@ export async function GET(request: NextRequest) {
     const accessTokenExpiresInSeconds = tokens.accessTokenExpiresInSeconds();
     const accessTokenExpiresAt = tokens.accessTokenExpiresAt();
     const hasRefreshToken = tokens.hasRefreshToken();
+    const scopes = tokens.scopes();
 
-    console.log({
+    console.log("oauth result: retrieved tokens", {
       accessToken,
       accessTokenExpiresInSeconds,
       accessTokenExpiresAt,
       hasRefreshToken,
+      scopes,
     });
 
     if (
@@ -70,22 +81,22 @@ export async function GET(request: NextRequest) {
     if (hasRefreshToken) {
       const refreshToken = tokens.refreshToken();
       console.log({ refreshToken });
+    } else {
+      console.log("no refresh token");
     }
 
     try {
       const idToken = tokens.idToken();
       console.log({ idToken });
     } catch (err) {
-      console.log(
-        "no id token found",
-        err instanceof Error ? err.message : "unknown"
-      );
+      console.log("no id token");
     }
 
     const encryptedAccessToken = await encrypt(
-      { accessToken },
+      { accessToken, scopes },
       accessTokenExpiresAt
     );
+
     cookies().set({
       name: "accessToken",
       value: encryptedAccessToken,
@@ -94,6 +105,9 @@ export async function GET(request: NextRequest) {
       expires: accessTokenExpiresAt,
       sameSite: "lax",
       path: "/",
+    });
+    console.log("encrypted access token & scopes & saved them to cookies", {
+      encryptedAccessToken,
     });
   } catch (e) {
     console.log(e);
@@ -113,5 +127,6 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  console.log("redirecting back to home page...");
   redirect("/");
 }

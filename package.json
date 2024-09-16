@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@googleapis/firebase": "^6.4.2",
     "@tanstack/react-query": "^5.54.1",
     "arctic": "^2.0.0-next.5",
     "jose": "^5.8.0",
